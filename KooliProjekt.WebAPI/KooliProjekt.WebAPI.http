@@ -1,0 +1,31 @@
+@host = http://localhost:5086
+
+### Kategooriad
+GET {{host}}/api/Categories/List/1/10
+
+### Üks toode
+GET {{host}}/api/Products/Get?Id=1
+
+### Tooted kategooria järgi
+GET {{host}}/api/Products/List/1/10?categoryId=1
+
+### Tellimus koos ridadega
+GET {{host}}/api/Orders/Get?Id=1
+
+### Olematu tellimus -> 404
+GET {{host}}/api/Orders/Get?Id=9999
+
+### Uus tellimus
+POST {{host}}/api/Orders/Save
+Content-Type: application/json
+
+{ "id": 0, "customerName": "Test Klient", "customerEmail": "test@example.com", "shippingAddress": "Pärnu mnt 1, Tallinn", "status": "New" }
+
+### Vigane toode -> 400 koos vigadega
+POST {{host}}/api/Products/Save
+Content-Type: application/json
+
+{ "id": 0, "name": "", "price": -5, "categoryId": 9999 }
+
+### Toote fotod
+GET {{host}}/api/Products/1/Files
