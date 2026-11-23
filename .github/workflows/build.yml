@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore KooliProjekt.sln
+
+      - name: Build
+        run: dotnet build KooliProjekt.sln --no-restore -c Debug
+
+      - name: Check migrations are up to date
+        if: hashFiles('KooliProjekt.Application/Migrations/*.cs') != ''
+        run: |
+          dotnet tool install --global dotnet-ef
+          dotnet ef migrations has-pending-model-changes --project KooliProjekt.Application --startup-project KooliProjekt.WebAPI --no-build
