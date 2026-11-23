@@ -25,4 +25,4 @@ jobs:
         if: hashFiles('KooliProjekt.Application/Migrations/*.cs') != ''
         run: |
           dotnet tool install --global dotnet-ef
-          dotnet ef migrations has-pending-model-changes --project KooliProjekt.Application --startup-project KooliProjekt.WebAPI --no-build
+          dotnet ef migrations has-pending-model-changes --project KooliProjekt.Application --startup-project KooliProjekt.WebAPI
