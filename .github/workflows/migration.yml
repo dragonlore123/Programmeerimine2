@@ -8,6 +8,9 @@ on:
         required: true
         default: 'InitialCreate'
 
+permissions:
+  contents: write
+
 jobs:
   migration:
     runs-on: ubuntu-latest
@@ -26,7 +29,10 @@ jobs:
           dotnet tool install --global dotnet-ef
           dotnet ef migrations add "${{ github.event.inputs.name }}" --project KooliProjekt.Application --startup-project KooliProjekt.WebAPI
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: migrations
-          path: KooliProjekt.Application/Migrations/
+      - name: Commit migration
+        run: |
+          git config user.name "Georg Volov"
+          git config user.email "georgvolov@gmail.com"
+          git add KooliProjekt.Application/Migrations
+          git commit -m "Migratsioon: ${{ github.event.inputs.name }}"
+          git push
