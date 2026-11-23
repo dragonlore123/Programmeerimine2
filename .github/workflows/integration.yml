@@ -23,7 +23,6 @@ jobs:
 
     env:
       ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=aspnet-KooliProjekt-GeorgVolov;User Id=sa;Password=Kool1Projekt!;TrustServerCertificate=True;MultipleActiveResultSets=true"
-      SQLCMD: docker exec ${{ job.services.mssql.id }} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Kool1Projekt! -C -d aspnet-KooliProjekt-GeorgVolov -h -1 -W -Q
 
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +48,7 @@ jobs:
 
       - name: Andmebaasi kontroll
         run: |
+          SQLCMD="docker exec ${{ job.services.mssql.id }} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Kool1Projekt! -C -d aspnet-KooliProjekt-GeorgVolov -h -1 -W -Q"
           $SQLCMD "SELECT MigrationId FROM __EFMigrationsHistory"
           $SQLCMD "SELECT 'Categories', COUNT(*) FROM Categories UNION ALL SELECT 'Products', COUNT(*) FROM Products UNION ALL SELECT 'Orders', COUNT(*) FROM Orders UNION ALL SELECT 'OrderItems', COUNT(*) FROM OrderItems"
           $SQLCMD "SELECT TOP 3 Id, CustomerName, Status FROM Orders ORDER BY Id"
