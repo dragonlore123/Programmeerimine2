@@ -74,7 +74,7 @@ req GET "$API/Products/Get?Id=5" >/dev/null
 PRICE=$(jq '.value.price' "$TMP/body")
 req GET "$API/Orders/Get?Id=$ORDER_ID" >/dev/null
 expect_eq "rea hind = toote hind" "$PRICE" "$(jq '.value.items[0].unitPrice' "$TMP/body")"
-expect_eq "tellimuse summa" "$(jq -n "$PRICE * 2")" "$(jq '.value.items | map(.lineTotal) | add' "$TMP/body")"
+expect_eq "tellimuse summa = 2 x hind" true "$(jq "(.value.items | map(.lineTotal) | add) == ($PRICE * 2)" "$TMP/body")"
 expect_code "makstuks" 200 "$(req POST "$API/Orders/Save" "{\"id\":$ORDER_ID,$ORDER,\"status\":\"Paid\"}")"
 expect_code "staatus tagasi New" 400 "$(req POST "$API/Orders/Save" "{\"id\":$ORDER_ID,$ORDER,\"status\":\"New\"}")"
 expect_code "makstud tellimuse kustutamine" 400 "$(req DELETE "$API/Orders/Delete" "{\"id\":$ORDER_ID}")"
