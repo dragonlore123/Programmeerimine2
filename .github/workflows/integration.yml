@@ -1,0 +1,75 @@
+name: API test (SQL Server)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  api-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Kool1Projekt!"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Kool1Projekt!' -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=aspnet-KooliProjekt-GeorgVolov;User Id=sa;Password=Kool1Projekt!;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      SQLCMD: docker exec ${{ job.services.mssql.id }} /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Kool1Projekt! -C -d aspnet-KooliProjekt-GeorgVolov -h -1 -W -Q
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: |
+          dotnet restore KooliProjekt.sln
+          dotnet build KooliProjekt.sln --no-restore -c Debug
+          dotnet tool install --global dotnet-ef
+
+      - name: Start API (migratsioon + testandmed)
+        run: |
+          dotnet run --project KooliProjekt.WebAPI --no-build --launch-profile http > api.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -s -o /dev/null http://localhost:5086/swagger/v1/swagger.json && break
+            sleep 2
+          done
+          curl -sf -o /dev/null http://localhost:5086/swagger/v1/swagger.json || (cat api.log; exit 1)
+
+      - name: Andmebaasi kontroll
+        run: |
+          $SQLCMD "SELECT MigrationId FROM __EFMigrationsHistory"
+          $SQLCMD "SELECT 'Categories', COUNT(*) FROM Categories UNION ALL SELECT 'Products', COUNT(*) FROM Products UNION ALL SELECT 'Orders', COUNT(*) FROM Orders UNION ALL SELECT 'OrderItems', COUNT(*) FROM OrderItems"
+          $SQLCMD "SELECT TOP 3 Id, CustomerName, Status FROM Orders ORDER BY Id"
+
+      - name: API päringud
+        run: bash tests/api-test.sh
+
+      - name: Andmebaasi kustutamine ja uuesti loomine
+        run: |
+          pkill -f KooliProjekt.WebAPI || true
+          sleep 3
+          dotnet ef database drop -f --project KooliProjekt.Application --startup-project KooliProjekt.WebAPI
+          dotnet run --project KooliProjekt.WebAPI --no-build --launch-profile http > api2.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -s -o /dev/null http://localhost:5086/swagger/v1/swagger.json && break
+            sleep 2
+          done
+          COUNT=$(curl -s http://localhost:5086/api/Categories/List/1/10 | jq '.value.rowCount')
+          echo "Kategooriaid pärast uuesti loomist: $COUNT"
+          [ "$COUNT" = "36" ]
+
+      - name: API logi
+        if: always()
+        run: cat api.log api2.log 2>/dev/null | tail -100
